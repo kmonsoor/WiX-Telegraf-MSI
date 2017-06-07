@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<Wix 
+	xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+	<Product Name="Telegraf stats-collection agent" Manufacturer="InfluxData Inc." Id="*" UpgradeCode="MANDATORY-UNIQUE-GUID-HERE" Language="1033" Codepage="1252" Version="1.1.0">
+		<Package Id="*" Keywords="Installer" Description="Windows Installer for Telegraf agent" Comments="a good intelligent comment here" Manufacturer="InfluxData" InstallerVersion="400" Languages="1033" SummaryCodepage="1252" Platform="x64" Compressed="yes" InstallPrivileges="elevated" InstallScope="perMachine"/>
+
+		<Upgrade Id="MANDATORY-UNIQUE-GUID-HERE">
+			<UpgradeVersion OnlyDetect="no" Property="PREVIOUSFOUND" Minimum="1.0.0" IncludeMinimum="yes" Maximum="99.0.0" IncludeMaximum="no" IgnoreRemoveFailure="yes"/>
+		</Upgrade>
+
+		<MajorUpgrade 
+			AllowSameVersionUpgrades="no" 
+			AllowDowngrades="no" 
+			DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+
+		<Media Id="1" Cabinet="telegraf.cab" EmbedCab="yes"/>
+
+		<Property Id="PCTAG" Value="NOTSET" Admin="yes" Secure="yes"/>
+		<Property Id="LOGFILELOCATION" Value="C:\Program Files\InfluxData\Telegraf\telegraf.log" Admin="yes" Secure="yes"/>
+
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFiles64Folder" Name="PFiles">
+				<Directory Id="OrgName" Name="">
+					<Directory Id="INSTALLDIR" Name="Telegraf">
+
+						<Component Id="MainExecutable" Guid="MANDATORY-UNIQUE-GUID-HERE" Win64="yes">
+							<File Id="TelegrafEXE" Name="Telegraf10.exe" DiskId="1" Source="telegraf.exe" KeyPath="yes"/>
+						</Component>
+
+						<Component Id="ConfigFile" Guid="MANDATORY-UNIQUE-GUID-HERE" Win64="yes">
+							<File Id="ConfigFileCONF" Name="Telegraf.conf" DiskId="1" Source="telegraf.conf" KeyPath="yes"/>
+						</Component>
+
+						<Component Id="PcTagRegistryEntry" Guid="MANDATORY-UNIQUE-GUID-HERE" Win64="yes">
+							<RegistryKey Root="HKLM" Key="SYSTEM\ControlSet001\Control\Session Manager\Environment">
+								<RegistryValue Type="string" Name="TELEGRAF_PC_TAG" Value="[PCTAG]" KeyPath="yes"/>
+							</RegistryKey>
+						</Component>
+
+						<Component Id="LogFileRegistryEntry" Guid="MANDATORY-UNIQUE-GUID-HERE" Win64="yes">
+							<RegistryKey Root="HKLM" Key="SYSTEM\ControlSet001\Control\Session Manager\Environment">
+								<RegistryValue Type="string" Name="TELEGRAF_LOGFILE" Value="[LOGFILELOCATION]" KeyPath="yes"/>
+							</RegistryKey>
+						</Component>
+
+					</Directory>
+				</Directory>
+			</Directory>
+		</Directory>
+
+		<!-- Actions to execute before the installation -->
+		<CustomAction Id="ExecServiceUninstall" 
+			Directory="INSTALLDIR" Execute="deferred" Impersonate="no" 
+			ExeCommand='"[INSTALLDIR]telegraf.exe" "--service" "uninstall"' 
+			Return="check"/>
+
+		<!-- Actions to execute after the installation -->
+		<CustomAction Id="ExecServiceInstall" 
+			Directory="INSTALLDIR" Execute="deferred" Impersonate="no" 
+			ExeCommand='"[INSTALLDIR]telegraf.exe" "--service" "install" "--config" "[INSTALLDIR]telegraf.conf"' 
+			Return="check"/>
+		
+		<CustomAction Id="ExecServiceStart" 
+			Directory="INSTALLDIR" Execute="deferred" Impersonate="no" 
+			ExeCommand='"net" "start" "telegraf"' 
+			Return="check"/>
+
+		<!-- list of "features" of the installer package -->
+		<Feature Id="Complete" Level="1">
+			<ComponentRef Id="MainExecutable"/>
+			<ComponentRef Id="ConfigFile"/>
+			<!-- <ComponentRef Id="LogFile" /> -->
+			<ComponentRef Id="PcTagRegistryEntry"/>
+			<ComponentRef Id="LogFileRegistryEntry"/>
+		</Feature>
+
+		<InstallExecuteSequence>
+			<Custom Action="ExecServiceUninstall" After="InstallInitialize">UPGRADINGPRODUCTCODE</Custom>
+			<Custom Action="ExecServiceInstall" Before="InstallFinalize"/>
+			<Custom Action="ExecServiceStart" Before="InstallFinalize"/>
+		</InstallExecuteSequence>
+
+	</Product>
+</Wix>
